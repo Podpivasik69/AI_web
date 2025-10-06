@@ -20,6 +20,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 10;
         }
 
         .image-card:hover .delete-btn {
@@ -31,7 +32,7 @@
         }
 
         .image-card {
-            position: relative; /* Добавляем для позиционирования кнопки */
+            position: relative;
         }
 
         .navbar {
@@ -84,7 +85,6 @@
             color: white;
         }
 
-        /* Сетки */
         .grid-large {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -134,7 +134,6 @@
             color: #666;
         }
 
-        /* Модальное окно */
         .modal {
             display: none;
             position: fixed;
@@ -183,15 +182,6 @@
             font-size: 16px;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
         .quality-badge {
             display: inline-block;
             padding: 3px 8px;
@@ -215,6 +205,23 @@
             background: #dc3545;
             color: white;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -222,6 +229,7 @@
 <div class="navbar">
     <a href="/">🎨 Генератор</a>
     <a href="/gallery/" class="active">🖼️ Галерея</a>
+    <a href="/archive/">🗂️ Архив</a>
 </div>
 
 <h1>🖼️ Галерея изображений</h1>
@@ -235,7 +243,6 @@
         <option value="medium">Среднее</option>
         <option value="high">Высокое</option>
     </select>
-
     <button onclick="clearFilters()" style="margin-left: 10px;">Сбросить фильтры</button>
 </div>
 
@@ -253,20 +260,19 @@
         {% for image in images %}
             <div class="image-card" data-quality="{{ image.filename|slice:'0:4' }}"
                  onclick="openModal('{{ image.url }}', '{{ image.filename }}', '{{ image.date }}')">
-                <!-- Кнопка удаления -->
-                <button class="delete-btn" onclick="event.stopPropagation(); deleteImage('{{ image.filename }}')">×
+                <button class="delete-btn" onclick="event.stopPropagation(); deleteImage('{{ image.filename }}')">
+                    ×
                 </button>
-
                 <img src="{{ image.url }}" alt="Сгенерированное изображение">
                 <div class="image-info">
                     <div>
                         <strong>Качество:</strong>
                         <span class="quality-badge quality-{{ image.filename|slice:'0:4' }}">
-                {% if 'fast' in image.filename %}Быстрое
-                {% elif 'medium' in image.filename %}Среднее
-                {% elif 'high' in image.filename %}Высокое
-                {% else %}Неизвестно{% endif %}
-            </span>
+                            {% if 'fast' in image.filename %}Быстрое
+                            {% elif 'medium' in image.filename %}Среднее
+                            {% elif 'high' in image.filename %}Высокое
+                            {% else %}Неизвестно{% endif %}
+                        </span>
                     </div>
                     <div><strong>Дата:</strong> {{ image.date }}</div>
                 </div>
@@ -293,69 +299,9 @@
 </div>
 
 <script>
-    function deleteImage(filename) {
-        if (confirm('Вы уверены, что хотите удалить это изображение?')) {
-            fetch(`/delete-image/${filename}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCSRFToken()
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Находим и удаляем карточку из DOM
-                        const cards = document.querySelectorAll('.image-card');
-                        cards.forEach(card => {
-                            if (card.querySelector('img').src.includes(filename)) {
-                                card.style.animation = 'fadeOut 0.3s';
-                                setTimeout(() => {
-                                    card.remove();
-                                    // Если карточек не осталось, показываем сообщение
-                                    if (document.querySelectorAll('.image-card').length === 0) {
-                                        showEmptyGallery();
-                                    }
-                                }, 300);
-                            }
-                        });
-                    } else {
-                        alert('Ошибка при удалении: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    alert('Ошибка сети: ' + error);
-                });
-        }
-    }
-
-    function showEmptyGallery() {
-        const grid = document.getElementById('gallery-grid');
-        grid.innerHTML = `
-            <div class="empty-gallery">
-                <h3>🖼️ Галерея пуста</h3>
-                <p>Сгенерируйте первое изображение на главной странице!</p>
-            </div>
-        `;
-    }
-
-    // Добавим анимацию исчезновения
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes fadeOut {
-            from { opacity: 1; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(-20px); }
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Функция для получения CSRF токена (если её ещё нет)
-    function getCSRFToken() {
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-        return csrfToken ? csrfToken.value : '';
-    }
-    
     let currentGridSize = 'large';
 
+    // Основные функции галереи
     function changeGrid(size) {
         currentGridSize = size;
         const grid = document.getElementById('gallery-grid');
@@ -363,7 +309,6 @@
 
         buttons.forEach(btn => btn.classList.remove('active'));
         event.target.classList.add('active');
-
         grid.className = 'grid-' + size;
     }
 
@@ -372,7 +317,14 @@
         const images = document.querySelectorAll('.image-card');
 
         images.forEach(card => {
-            const cardQuality = card.getAttribute('data-quality');
+            const filename = card.querySelector('img').src.split('/').pop();
+            let cardQuality = '';
+            
+            if (filename.includes('fast_')) cardQuality = 'fast';
+            else if (filename.includes('medium_')) cardQuality = 'medium';
+            else if (filename.includes('high_')) cardQuality = 'high';
+            else if (filename.includes('img_')) cardQuality = 'unknown';
+
             if (qualityFilter === 'all' || cardQuality === qualityFilter) {
                 card.style.display = 'block';
             } else {
@@ -386,6 +338,58 @@
         filterGallery();
     }
 
+    // Функции для работы с изображениями
+    function deleteImage(filename) {
+        if (!confirm('Переместить это изображение в архив?')) {
+            return;
+        }
+
+        fetch(`/delete-image/${filename}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                removeImageCard(filename);
+                showNotification('Изображение перемещено в архив', 'success');
+            } else {
+                alert('Ошибка при перемещении: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка сети: ' + error);
+        });
+    }
+
+    function removeImageCard(filename) {
+        const cards = document.querySelectorAll('.image-card');
+        cards.forEach(card => {
+            if (card.querySelector('img').src.includes(filename)) {
+                card.style.animation = 'fadeOut 0.3s';
+                setTimeout(() => {
+                    card.remove();
+                    if (document.querySelectorAll('.image-card').length === 0) {
+                        showEmptyGallery();
+                    }
+                }, 300);
+            }
+        });
+    }
+
+    function showEmptyGallery() {
+        const grid = document.getElementById('gallery-grid');
+        grid.innerHTML = `
+            <div class="empty-gallery">
+                <h3>🖼️ Галерея пуста</h3>
+                <p>Сгенерируйте первое изображение на главной странице!</p>
+            </div>
+        `;
+    }
+
+    // Модальное окно
     function openModal(imageUrl, filename, date) {
         const modal = document.getElementById('imageModal');
         const modalImage = document.getElementById('modalImage');
@@ -396,8 +400,6 @@
         modalFilename.textContent = `Файл: ${filename}`;
         modalDate.textContent = `Создано: ${date}`;
         modal.style.display = 'block';
-
-        // Блокируем прокрутку body
         document.body.style.overflow = 'hidden';
     }
 
@@ -407,16 +409,57 @@
         document.body.style.overflow = 'auto';
     }
 
-    // Закрытие модального окна при клике вне изображения
-    window.onclick = function (event) {
+    // Утилиты
+    function getCSRFToken() {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            return csrfToken.value;
+        }
+        
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+        
+        return cookieValue || '';
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        
+        notification.style.background = type === 'success' ? '#28a745' : 
+                                      type === 'error' ? '#dc3545' : '#17a2b8';
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => document.body.removeChild(notification), 300);
+        }, 3000);
+    }
+
+    // Обработчики событий
+    window.onclick = function(event) {
         const modal = document.getElementById('imageModal');
         if (event.target === modal) {
             closeModal();
         }
-    }
+    };
 
-    // Закрытие модального окна по ESC
-    document.addEventListener('keydown', function (event) {
+    document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             closeModal();
         }

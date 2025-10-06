@@ -9,6 +9,7 @@
             margin-bottom: 20px;
             border-radius: 10px;
         }
+
         .navbar a {
             text-decoration: none;
             padding: 10px 20px;
@@ -18,9 +19,11 @@
             border-radius: 5px;
             transition: background 0.3s;
         }
+
         .navbar a:hover {
             background: #0056b3;
         }
+
         .navbar a.active {
             background: #0056b3;
         }
@@ -28,9 +31,10 @@
 </head>
 <body>
 <div class="navbar">
-        <a href="/" class="active">🎨 Генератор</a>
-        <a href="/gallery/">🖼️ Галерея</a>
-    </div>
+    <a href="/">🎨 Генератор</a>
+    <a href="/gallery/" class="active">🖼️ Галерея</a>
+    <a href="/archive/">🗂️ Архив</a>
+</div>
 <h1>🎨 Генератор изображений</h1>
 
 {% if error %}
@@ -91,6 +95,7 @@
 </form>
 
 <script>
+    let isGenerating = false;
     let progressInterval;
 
     function getCSRFToken() {
@@ -99,170 +104,184 @@
     }
 
     function startGeneration() {
-    const form = document.querySelector('form');
-    const formData = new FormData(form);
-    
-    // БЛОКИРУЕМ НАВИГАЦИЮ
-    const navLinks = document.querySelectorAll('.navbar a');
-    navLinks.forEach(link => {
-        if (!link.classList.contains('active')) {
-            link.style.opacity = '0.5';
-            link.style.pointerEvents = 'none';
-            link.title = 'Дождитесь завершения генерации';
-        }
-    });
-    
-    const quality = formData.get('quality');
+        const form = document.querySelector('form');
+        const formData = new FormData(form);
 
-    // Настройки для каждого качества
-    const qualitySettings = {
-        'fast': { time: 15000, steps: 20, timePerStep: 750 },    // 20 шагов × 0.75с = 15с
-        'medium': { time: 35000, steps: 30, timePerStep: 1167 }, // 30 шагов × 1.17с = 35с
-        'high': { time: 60000, steps: 40, timePerStep: 1500 }    // 40 шагов × 1.5с = 60с
-    };
-
-    const settings = qualitySettings[quality] || qualitySettings.medium;
-
-    console.log('Начало генерации, шаги:', settings.steps, 'время:', settings.time);
-
-    // Показываем прогресс-бар
-    const progressContainer = document.getElementById('progress-container');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-    const statusText = document.getElementById('status-text');
-
-    progressContainer.style.display = 'block';
-    progressBar.style.width = '0%';
-    progressText.textContent = '0%';
-    statusText.textContent = 'Подготовка...';
-
-    document.getElementById('result-container').style.display = 'none';
-
-    // Умная анимация прогресса
-    let animatedProgress = 0;
-    let startTime = Date.now();
-    let progressInterval;
-    let generationStartTime = null;
-    let currentStep = 0;
-
-    function updateProgressAnimation() {
-        const elapsed = Date.now() - startTime;
-
-        // Первые 25% медленно (загрузка модели) - 5 секунд
-        if (elapsed < 5000) {
-            animatedProgress = Math.min(25, (elapsed / 5000) * 25);
-            statusText.textContent = '🔄 Загрузка модели...';
-        }
-        // Генерация - ЗАВИСИМ ОТ ШАГОВ ДЛЯ HIGH QUALITY
-        else {
-            if (!generationStartTime) {
-                generationStartTime = Date.now();
+        // БЛОКИРУЕМ НАВИГАЦИЮ
+        isGenerating = true;
+        const navLinks = document.querySelectorAll('.navbar a');
+        navLinks.forEach(link => {
+            if (!link.classList.contains('active')) {
+                link.style.opacity = '0.5';
+                link.style.pointerEvents = 'none';
+                link.title = 'Дождитесь завершения генерации';
             }
+        });
 
-            const generationElapsed = Date.now() - generationStartTime;
+        const quality = formData.get('quality');
 
-            if (quality === 'high') {
-                // ДЛЯ HIGH QUALITY: прогресс зависит от времени, но с защитой
-                const expectedTotalTime = 55000;
-                const timeProgress = Math.min(70, (generationElapsed / expectedTotalTime) * 70);
+        // Настройки для каждого качества
+        const qualitySettings = {
+            'fast': {time: 15000, steps: 20, timePerStep: 750},
+            'medium': {time: 35000, steps: 30, timePerStep: 1167},
+            'high': {time: 60000, steps: 40, timePerStep: 1500}
+        };
 
-                // ОГРАНИЧИВАЕМ: не более 1.75% за шаг (70% / 40 шагов)
-                const maxStepProgress = currentStep * 1.75;
-                animatedProgress = 25 + Math.min(timeProgress, maxStepProgress);
+        const settings = qualitySettings[quality] || qualitySettings.medium;
 
-                // Симулируем шаги на основе времени
-                const simulatedStep = Math.min(settings.steps, Math.floor(generationElapsed / 1400));
-                if (simulatedStep > currentStep) {
-                    currentStep = simulatedStep;
+        console.log('Начало генерации, шаги:', settings.steps, 'время:', settings.time);
+
+        // Показываем прогресс-бар
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const statusText = document.getElementById('status-text');
+
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = '0%';
+        statusText.textContent = 'Подготовка...';
+
+        document.getElementById('result-container').style.display = 'none';
+
+        // Умная анимация прогресса
+        let animatedProgress = 0;
+        let startTime = Date.now();
+        let generationStartTime = null;
+        let currentStep = 0;
+
+        function updateProgressAnimation() {
+            const elapsed = Date.now() - startTime;
+
+            // Первые 25% медленно (загрузка модели) - 5 секунд
+            if (elapsed < 5000) {
+                animatedProgress = Math.min(25, (elapsed / 5000) * 25);
+                statusText.textContent = '🔄 Загрузка модели...';
+            }
+            // Генерация
+            else {
+                if (!generationStartTime) {
+                    generationStartTime = Date.now();
                 }
 
-                statusText.textContent = `🎨 Генерация... (шаг ${currentStep}/${settings.steps})`;
-            } else {
-                // Для fast/medium - обычная временная логика
-                const generationTime = settings.time - 5000;
-                const generationProgress = Math.min(70, (generationElapsed / generationTime) * 70);
-                animatedProgress = 25 + generationProgress;
+                const generationElapsed = Date.now() - generationStartTime;
 
-                // Симулируем шаги для отображения
-                const simulatedStep = Math.min(settings.steps, Math.floor((generationProgress / 70) * settings.steps));
-                statusText.textContent = `🎨 Генерация... (шаг ${simulatedStep}/${settings.steps})`;
+                if (quality === 'high') {
+                    const expectedTotalTime = 55000;
+                    const timeProgress = Math.min(70, (generationElapsed / expectedTotalTime) * 70);
+                    const maxStepProgress = currentStep * 1.75;
+                    animatedProgress = 25 + Math.min(timeProgress, maxStepProgress);
+
+                    const simulatedStep = Math.min(settings.steps, Math.floor(generationElapsed / 1400));
+                    if (simulatedStep > currentStep) {
+                        currentStep = simulatedStep;
+                    }
+
+                    statusText.textContent = `🎨 Генерация... (шаг ${currentStep}/${settings.steps})`;
+                } else {
+                    const generationTime = settings.time - 5000;
+                    const generationProgress = Math.min(70, (generationElapsed / generationTime) * 70);
+                    animatedProgress = 25 + generationProgress;
+
+                    const simulatedStep = Math.min(settings.steps, Math.floor((generationProgress / 70) * settings.steps));
+                    statusText.textContent = `🎨 Генерация... (шаг ${simulatedStep}/${settings.steps})`;
+                }
             }
+
+            // ФИКС: Не даем превысить 95% до получения ответа
+            animatedProgress = Math.min(95, animatedProgress);
+
+            progressBar.style.width = animatedProgress + '%';
+            progressText.textContent = Math.round(animatedProgress) + '%';
         }
 
-        // ФИКС: Не даем превысить 95% до получения ответа
-        animatedProgress = Math.min(95, animatedProgress);
+        // Запускаем анимацию прогресса
+        progressInterval = setInterval(updateProgressAnimation, 200);
 
-        progressBar.style.width = animatedProgress + '%';
-        progressText.textContent = Math.round(animatedProgress) + '%';
+        // Отправляем запрос генерации - ИСПРАВЛЕННЫЙ URL
+        fetch('/generate-ajax/', {  // Убедитесь что этот URL есть в urls.py
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                prompt: formData.get('prompt'),
+                model: formData.get('model'),
+                quality: quality,
+                negative: formData.get('negative')
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Останавливаем анимацию
+                clearInterval(progressInterval);
+
+                // РАЗБЛОКИРУЕМ НАВИГАЦИЮ
+                isGenerating = false;
+                navLinks.forEach(link => {
+                    link.style.opacity = '1';
+                    link.style.pointerEvents = 'auto';
+                    link.title = '';
+                });
+
+                // Устанавливаем 100% и финальный статус
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+                statusText.textContent = '✅ Генерация завершена';
+
+                // Показываем результат
+                if (data.success) {
+                    document.getElementById('result-image').src = data.image_url;
+                    document.getElementById('result-container').style.display = 'block';
+                } else {
+                    statusText.textContent = '❌ Ошибка генерации';
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                clearInterval(progressInterval);
+                statusText.textContent = '❌ Ошибка соединения';
+
+                // РАЗБЛОКИРУЕМ НАВИГАЦИЮ ПРИ ОШИБКЕ
+                isGenerating = false;
+                navLinks.forEach(link => {
+                    link.style.opacity = '1';
+                    link.style.pointerEvents = 'auto';
+                    link.title = '';
+                });
+
+                alert('Ошибка: ' + error.message);
+            });
     }
 
-    // Запускаем анимацию прогресса
-    progressInterval = setInterval(updateProgressAnimation, 200);
-
-    // Отправляем запрос генерации
-    fetch('/generate/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        },
-        body: JSON.stringify({
-            prompt: formData.get('prompt'),
-            model: formData.get('model'),
-            quality: quality,
-            negative: formData.get('negative')
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Останавливаем анимацию
-        clearInterval(progressInterval);
-        
-        // РАЗБЛОКИРУЕМ НАВИГАЦИЮ
-        navLinks.forEach(link => {
-            link.style.opacity = '1';
-            link.style.pointerEvents = 'auto';
-            link.title = '';
-        });
-        
-        // Устанавливаем 100% и финальный статус
-        animatedProgress = 100;
-        progressBar.style.width = '100%';
-        progressText.textContent = '100%';
-        statusText.textContent = '✅ Генерация завершена';
-        
-        // Показываем результат
-        if (data.success) {
-            document.getElementById('result-image').src = data.image_url;
-            document.getElementById('result-container').style.display = 'block';
-        } else {
-            statusText.textContent = '❌ Ошибка генерации';
-            alert('Ошибка: ' + data.error);
+    // Блокируем переход по ссылке галереи
+    document.addEventListener('DOMContentLoaded', function () {
+        const galleryLink = document.querySelector('a[href*="gallery"]');
+        if (galleryLink) {
+            galleryLink.addEventListener('click', function (e) {
+                if (isGenerating) {
+                    e.preventDefault();
+                    alert('⏳ Пожалуйста, дождитесь завершения генерации перед переходом в галерею');
+                    return false;
+                }
+            });
         }
-    })
-    .catch(error => {
-        clearInterval(progressInterval);
-        statusText.textContent = '❌ Ошибка соединения';
-        
-        // РАЗБЛОКИРУЕМ НАВИГАЦИЮ ПРИ ОШИБКЕ
-        navLinks.forEach(link => {
-            link.style.opacity = '1';
-            link.style.pointerEvents = 'auto';
-            link.title = '';
-        });
-        
-        alert('Ошибка: ' + error.message);
-    });
-    .catch(error => {
-        clearInterval(progressInterval);
-        statusText.textContent = '❌ Ошибка соединения';
-        alert('Ошибка: ' + error.message);
-    });
-}
 
-    document.querySelector('form').addEventListener('submit', function (e) {
-        e.preventDefault();
-        startGeneration();
+        // Также блокируем закрытие страницы во время генерации
+        window.addEventListener('beforeunload', function (e) {
+            if (isGenerating) {
+                e.preventDefault();
+                e.returnValue = 'Идет генерация изображения. Вы уверены, что хотите покинуть страницу?';
+                return e.returnValue;
+            }
+        });
+
+        // Обработчик формы
+        document.querySelector('form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            startGeneration();
+        });
     });
 </script>
 </body>

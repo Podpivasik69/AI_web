@@ -8,6 +8,7 @@ import os
 import time
 import json
 from django.views.decorators.csrf import csrf_exempt
+from .models import PromptHistory, ModelSettings, GenerationSettings
 import io
 import sys
 from contextlib import redirect_stdout
@@ -25,16 +26,93 @@ current_pipe = None
 current_model = None
 
 
-def delete_image(request, filename):
-    """Удаляет изображение из галереи"""
+def archive(request):
+    """Показывает архив удаленных изображений"""
+    archive_dir = os.path.join(settings.MEDIA_ROOT, 'bad')
+    archive_files = []
+
+    if os.path.exists(archive_dir):
+        for file_path in glob.glob(os.path.join(archive_dir, "*.png")):
+            filename = os.path.basename(file_path)
+            file_time = os.path.getmtime(file_path)
+            archive_files.append({
+                'filename': filename,
+                'url': f'/media/bad/{filename}',
+                'time': file_time,
+                'date': time.strftime('%Y-%m-%d %H:%M', time.localtime(file_time))
+            })
+
+    archive_files.sort(key=lambda x: x['time'], reverse=True)
+
+    context = {
+        'images': archive_files,
+    }
+    return render(request, 'archive.html', context)
+
+
+def restore_image(request, filename):
+    """Восстанавливает изображение из архива в галерею"""
     if request.method == 'POST':
         try:
-            image_path = os.path.join(settings.MEDIA_ROOT, 'img', filename)
-            if os.path.exists(image_path):
-                os.remove(image_path)
-                return JsonResponse({'success': True})
+            # Путь к файлу в архиве
+            archive_path = os.path.join(settings.MEDIA_ROOT, 'bad', filename)
+            # Путь для восстановления
+            restore_path = os.path.join(settings.MEDIA_ROOT, 'img', filename)
+
+            if os.path.exists(archive_path):
+                # Перемещаем файл обратно
+                os.rename(archive_path, restore_path)
+                return JsonResponse({'success': True, 'message': 'Изображение восстановлено'})
+            else:
+                return JsonResponse({'success': False, 'error': 'Файл не найден в архиве'})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+
+def delete_permanent(request, filename):
+    """Полностью удаляет изображение из архива"""
+    if request.method == 'POST':
+        try:
+            file_path = os.path.join(settings.MEDIA_ROOT, 'bad', filename)
+
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                return JsonResponse({'success': True, 'message': 'Изображение удалено навсегда'})
             else:
                 return JsonResponse({'success': False, 'error': 'Файл не найден'})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'Invalid method'})
+
+
+def delete_image(request, filename):
+    """Перемещает изображение в папку bad вместо удаления"""
+    if request.method == 'POST':
+        try:
+            # Исходный путь к изображению
+            source_path = os.path.join(settings.MEDIA_ROOT, 'img', filename)
+
+            # Путь к папке bad
+            bad_dir = os.path.join(settings.MEDIA_ROOT, 'bad')
+
+            # Создаем папку bad если ее нет
+            os.makedirs(bad_dir, exist_ok=True)
+
+            # Новый путь для изображения
+            destination_path = os.path.join(bad_dir, filename)
+
+            if os.path.exists(source_path):
+                # Перемещаем файл
+                os.rename(source_path, destination_path)
+                return JsonResponse({'success': True, 'message': 'Изображение перемещено в архив'})
+            else:
+                return JsonResponse({'success': False, 'error': 'Файл не найден'})
+
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
 

@@ -26,7 +26,11 @@ urlpatterns = [
     path('generate/', views.generate_ajax, name='generate'),  # ДОЛЖЕН БЫТЬ
     path('progress/', views.get_progress, name='progress'),  # ДОЛЖЕН БЫТЬ
     path('gallery/', views.gallery, name='gallery'),
+    path('generate-ajax/', views.generate_ajax, name='generate_ajax'),
+    path('archive/', views.archive, name='archive'),
     path('delete-image/<str:filename>/', views.delete_image, name='delete_image'),
+    path('restore-image/<str:filename>/', views.restore_image, name='restore_image'),  # Восстановление
+    path('delete-permanent/<str:filename>/', views.delete_permanent, name='delete_permanent'),  # Полное удаление
 ]
 
 if settings.DEBUG:
