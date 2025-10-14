@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Галерея изображений</title>
+    <style>
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .image-card:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .image-card {
+            position: relative;
+        }
+
+        .navbar {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        .navbar a {
+            text-decoration: none;
+            padding: 10px 20px;
+            margin-right: 10px;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+            background: #0056b3;
+        }
+
+        .navbar a.active {
+            background: #0056b3;
+        }
+
+        .filters {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .grid-controls {
+            margin: 10px 0;
+        }
+
+        .grid-controls button {
+            padding: 8px 15px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .grid-controls button.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .grid-large {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .grid-medium {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .grid-small {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        .image-info {
+            padding: 10px 0;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .empty-gallery {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            position: relative;
+            margin: 5% auto;
+            max-width: 90%;
+            max-height: 90%;
+            text-align: center;
+        }
+
+        .modal-image {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            color: white;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .close:hover {
+            color: #ccc;
+        }
+
+        .modal-info {
+            color: white;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        .quality-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .quality-fast {
+            background: #28a745;
+            color: white;
+        }
+
+        .quality-medium {
+            background: #ffc107;
+            color: black;
+        }
+
+        .quality-high {
+            background: #dc3545;
+            color: white;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+<!-- Навигация -->
+<div class="navbar">
+    <a href="/">🎨 Генератор</a>
+    <a href="/gallery/" class="active">🖼️ Галерея</a>
+    <a href="/archive/">🗂️ Архив</a>
+</div>
+
+<h1>🖼️ Галерея изображений</h1>
+
+<!-- Фильтры -->
+<div class="filters">
+    <strong>Фильтры:</strong>
+    <select id="qualityFilter" onchange="filterGallery()">
+        <option value="all">Все качества</option>
+        <option value="fast">Быстрое</option>
+        <option value="medium">Среднее</option>
+        <option value="high">Высокое</option>
+    </select>
+    <button onclick="clearFilters()" style="margin-left: 10px;">Сбросить фильтры</button>
+</div>
+
+<!-- Управление сеткой -->
+<div class="grid-controls">
+    <strong>Размер сетки:</strong>
+    <button onclick="changeGrid('large')" class="active">Большая</button>
+    <button onclick="changeGrid('medium')">Средняя</button>
+    <button onclick="changeGrid('small')">Маленькая</button>
+</div>
+
+<!-- Галерея -->
+<div id="gallery-grid" class="grid-large">
+    {% if images %}
+        {% for image in images %}
+            <div class="image-card" data-quality="{{ image.filename|slice:'0:4' }}"
+                 onclick="openModal('{{ image.url }}', '{{ image.filename }}', '{{ image.date }}')">
+                <button class="delete-btn" onclick="event.stopPropagation(); deleteImage('{{ image.filename }}')">
+                    ×
+                </button>
+                <img src="{{ image.url }}" alt="Сгенерированное изображение">
+                <div class="image-info">
+                    <div>
+                        <strong>Качество:</strong>
+                        <span class="quality-badge quality-{{ image.filename|slice:'0:4' }}">
+                            {% if 'fast' in image.filename %}Быстрое
+                            {% elif 'medium' in image.filename %}Среднее
+                            {% elif 'high' in image.filename %}Высокое
+                            {% else %}Неизвестно{% endif %}
+                        </span>
+                    </div>
+                    <div><strong>Дата:</strong> {{ image.date }}</div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-gallery">
+            <h3>🖼️ Галерея пуста</h3>
+            <p>Сгенерируйте первое изображение на главной странице!</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Модальное окно -->
+<div id="imageModal" class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <div class="modal-content">
+        <img id="modalImage" class="modal-image" src="" alt="Увеличенное изображение">
+        <div class="modal-info">
+            <div id="modalFilename"></div>
+            <div id="modalDate"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentGridSize = 'large';
+
+    // Основные функции галереи
+    function changeGrid(size) {
+        currentGridSize = size;
+        const grid = document.getElementById('gallery-grid');
+        const buttons = document.querySelectorAll('.grid-controls button');
+
+        buttons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        grid.className = 'grid-' + size;
+    }
+
+    function filterGallery() {
+        const qualityFilter = document.getElementById('qualityFilter').value;
+        const images = document.querySelectorAll('.image-card');
+
+        images.forEach(card => {
+            const filename = card.querySelector('img').src.split('/').pop();
+            let cardQuality = '';
+            
+            if (filename.includes('fast_')) cardQuality = 'fast';
+            else if (filename.includes('medium_')) cardQuality = 'medium';
+            else if (filename.includes('high_')) cardQuality = 'high';
+            else if (filename.includes('img_')) cardQuality = 'unknown';
+
+            if (qualityFilter === 'all' || cardQuality === qualityFilter) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    function clearFilters() {
+        document.getElementById('qualityFilter').value = 'all';
+        filterGallery();
+    }
+
+    // Функции для работы с изображениями
+    function deleteImage(filename) {
+        if (!confirm('Переместить это изображение в архив?')) {
+            return;
+        }
+
+        fetch(`/delete-image/${filename}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                removeImageCard(filename);
+                showNotification('Изображение перемещено в архив', 'success');
+            } else {
+                alert('Ошибка при перемещении: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка сети: ' + error);
+        });
+    }
+
+    function removeImageCard(filename) {
+        const cards = document.querySelectorAll('.image-card');
+        cards.forEach(card => {
+            if (card.querySelector('img').src.includes(filename)) {
+                card.style.animation = 'fadeOut 0.3s';
+                setTimeout(() => {
+                    card.remove();
+                    if (document.querySelectorAll('.image-card').length === 0) {
+                        showEmptyGallery();
+                    }
+                }, 300);
+            }
+        });
+    }
+
+    function showEmptyGallery() {
+        const grid = document.getElementById('gallery-grid');
+        grid.innerHTML = `
+            <div class="empty-gallery">
+                <h3>🖼️ Галерея пуста</h3>
+                <p>Сгенерируйте первое изображение на главной странице!</p>
+            </div>
+        `;
+    }
+
+    // Модальное окно
+    function openModal(imageUrl, filename, date) {
+        const modal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalFilename = document.getElementById('modalFilename');
+        const modalDate = document.getElementById('modalDate');
+
+        modalImage.src = imageUrl;
+        modalFilename.textContent = `Файл: ${filename}`;
+        modalDate.textContent = `Создано: ${date}`;
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('imageModal');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    // Утилиты
+    function getCSRFToken() {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            return csrfToken.value;
+        }
+        
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+        
+        return cookieValue || '';
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        
+        notification.style.background = type === 'success' ? '#28a745' : 
+                                      type === 'error' ? '#dc3545' : '#17a2b8';
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => document.body.removeChild(notification), 300);
+        }, 3000);
+    }
+
+    // Обработчики событий
+    window.onclick = function(event) {
+        const modal = document.getElementById('imageModal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+</script>
+</body>
+</html>

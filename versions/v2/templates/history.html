@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>История промптов</title>
+    <style>
+        .navbar {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        .navbar a {
+            text-decoration: none;
+            padding: 10px 20px;
+            margin-right: 10px;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+            background: #0056b3;
+        }
+
+        .navbar a.active {
+            background: #0056b3;
+        }
+
+        .prompt-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #007bff;
+        }
+
+        .prompt-text {
+            font-size: 16px;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .prompt-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+            color: #666;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 15px;
+        }
+
+        .reuse-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .reuse-btn:hover {
+            background: #218838;
+        }
+
+        .empty-history {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .filters {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .search-box {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 300px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <a href="/">🎨 Генератор</a>
+    <a href="/gallery/">🖼️ Галерея</a>
+    <a href="/archive/">🗂️ Архив</a>
+    <a href="/history/" class="active">📝 История промптов</a>
+</div>
+
+<h1>📝 История промптов</h1>
+
+<!-- Фильтры и поиск -->
+<div class="filters">
+    <input type="text" id="searchInput" class="search-box" placeholder="🔍 Поиск по промптам..."
+           onkeyup="filterPrompts()">
+    <select id="modelFilter" onchange="filterPrompts()">
+        <option value="all">Все модели</option>
+        <option value="Waifu Diffusion">Waifu Diffusion</option>
+        <option value="MeinaMix">MeinaMix</option>
+        <option value="Anything V5">Anything V5</option>
+        <option value="Stable Diffusion v1.5">Stable Diffusion v1.5</option>
+    </select>
+    <select id="qualityFilter" onchange="filterPrompts()">
+        <option value="all">Все качества</option>
+        <option value="fast">Быстрое</option>
+        <option value="medium">Среднее</option>
+        <option value="high">Высокое</option>
+    </select>
+    <button onclick="clearFilters()">Сбросить фильтры</button>
+</div>
+
+<!-- История промптов -->
+<div id="prompts-list">
+    {% if prompts %}
+        {% for prompt in prompts %}
+            <div class="prompt-card" data-model="{{ prompt.model_used }}" data-quality="{{ prompt.quality_used }}">
+                <div class="prompt-text">
+                    <strong>📝 Промпт:</strong> {{ prompt.prompt_text }}
+                </div>
+                {% if prompt.translated_prompt %}
+                    <div class="prompt-text" style="color: #666; font-style: italic;">
+                        <strong>🌐 Перевод:</strong> {{ prompt.translated_prompt }}
+                    </div>
+                {% endif %}
+                <div class="prompt-meta">
+                    <span class="meta-item">🕒 {{ prompt.created_at|date:"d.m.Y H:i" }}</span>
+                    <span class="meta-item">🎨 {{ prompt.model_used }}</span>
+                    <span class="meta-item">
+                        {% if prompt.quality_used == 'fast' %}⚡ Быстрое
+                        {% elif prompt.quality_used == 'medium' %}🔶 Среднее
+                        {% elif prompt.quality_used == 'high' %}🔥 Высокое
+                        {% endif %}
+                        <span class="meta-item">🔢 Использован: {{ prompt.use_count }} раз</span>
+                        {% if prompt.negative_prompt_used != 'none' %}
+                            <span class="meta-item">🚫 {{ prompt.negative_prompt_used }}</span>
+                        {% endif %}
+                </div>
+                <button class="reuse-btn"
+                        onclick="reusePrompt('{{ prompt.prompt_text }}', '{{ prompt.model_used }}', '{{ prompt.quality_used }}', '{{ prompt.negative_prompt_used }}')">
+                    🔄 Использовать снова
+                </button>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-history">
+            <h3>📝 История пуста</h3>
+            <p>Здесь появятся все использованные промпты после генерации изображений</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    function filterPrompts() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const modelFilter = document.getElementById('modelFilter').value;
+        const qualityFilter = document.getElementById('qualityFilter').value;
+        const prompts = document.querySelectorAll('.prompt-card');
+
+        prompts.forEach(prompt => {
+            const promptText = prompt.querySelector('.prompt-text').textContent.toLowerCase();
+            const promptModel = prompt.getAttribute('data-model');
+            const promptQuality = prompt.getAttribute('data-quality');
+
+            const matchesSearch = promptText.includes(searchText);
+            const matchesModel = modelFilter === 'all' || promptModel === modelFilter;
+            const matchesQuality = qualityFilter === 'all' || promptQuality === qualityFilter;
+
+            if (matchesSearch && matchesModel && matchesQuality) {
+                prompt.style.display = 'block';
+            } else {
+                prompt.style.display = 'none';
+            }
+        });
+    }
+
+    function clearFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('modelFilter').value = 'all';
+        document.getElementById('qualityFilter').value = 'all';
+        filterPrompts();
+    }
+
+    function reusePrompt(promptText, modelUsed, qualityUsed, negativeUsed) {
+        console.log('Reusing prompt:', promptText);
+
+        // Сохраняем данные для главной страницы БЕЗ флага useAjax
+        localStorage.setItem('autoGenerate', JSON.stringify({
+            prompt: promptText,
+            model: modelUsed,
+            quality: qualityUsed,
+            negative: negativeUsed,
+            timestamp: Date.now()
+            // УБРАЛ useAjax: true
+        }));
+
+        // Переходим на главную
+        window.location.href = '/';
+    }
+    
+
+    // Автозаполнение формы при загрузке главной страницы с параметрами
+    document.addEventListener('DOMContentLoaded', function () {
+        // Проверяем есть ли параметры в URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const promptParam = urlParams.get('prompt');
+        const modelParam = urlParams.get('model');
+        const qualityParam = urlParams.get('quality');
+        const negativeParam = urlParams.get('negative');
+
+        if (promptParam && window.location.pathname === '/') {
+            // Декодируем параметры
+            const promptText = decodeURIComponent(promptParam);
+            const modelUsed = decodeURIComponent(modelParam);
+            const qualityUsed = decodeURIComponent(qualityParam);
+            const negativeUsed = decodeURIComponent(negativeParam);
+
+            console.log('Auto-filling form with:', {promptText, modelUsed, qualityUsed, negativeUsed});
+
+            // Ждем немного чтобы форма успела загрузиться
+            setTimeout(() => {
+                const promptField = document.querySelector('textarea[name="prompt"]');
+                const modelSelect = document.querySelector('select[name="model"]');
+                const qualitySelect = document.querySelector('select[name="quality"]');
+                const negativeSelect = document.querySelector('select[name="negative"]');
+
+                if (promptField && modelSelect && qualitySelect && negativeSelect) {
+                    // Заполняем поле промпта
+                    promptField.value = promptText;
+
+                    // Находим и выбираем нужную модель
+                    const modelOptions = modelSelect.options;
+                    let modelFound = false;
+                    for (let i = 0; i < modelOptions.length; i++) {
+                        if (modelOptions[i].textContent.trim() === modelUsed) {
+                            modelSelect.selectedIndex = i;
+                            modelFound = true;
+                            break;
+                        }
+                    }
+
+                    // Устанавливаем качество
+                    if (['fast', 'medium', 'high'].includes(qualityUsed)) {
+                        qualitySelect.value = qualityUsed;
+                    }
+
+                    // Устанавливаем негативные промпты
+                    if (['none', 'standard', 'anime'].includes(negativeUsed)) {
+                        negativeSelect.value = negativeUsed;
+                    }
+
+                    // Показываем уведомление
+                    if (modelFound) {
+                        alert('Промпт загружен из истории! Нажмите "Сгенерировать изображение"');
+                    } else {
+                        alert('Промпт загружен, но модель не найдена. Проверьте настройки и нажмите "Сгенерировать изображение"');
+                    }
+
+                    // Очищаем URL чтобы при перезагрузке не заполнялось снова
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } else {
+                    console.error('Form fields not found');
+                }
+            }, 100);
+        }
+    });
+</script>
+</body>
+</html>

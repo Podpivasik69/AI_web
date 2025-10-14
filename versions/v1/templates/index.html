@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Image Generator</title>
+    <style>
+        .navbar {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        .navbar a {
+            text-decoration: none;
+            padding: 10px 20px;
+            margin-right: 10px;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+            background: #0056b3;
+        }
+
+        .navbar a.active {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <a href="/">🎨 Генератор</a>
+    <a href="/gallery/" class="active">🖼️ Галерея</a>
+    <a href="/archive/">🗂️ Архив</a>
+</div>
+<h1>🎨 Генератор изображений</h1>
+
+{% if error %}
+    <div style="color: red;">❌ {{ error }}</div>
+{% endif %}
+
+<!-- Старый результат (удалить после теста) -->
+{% if image_url %}
+    <div>
+        <h3>✅ Изображение сгенерировано!</h3>
+        <img src="{{ image_url }}" style="max-width: 512px;">
+    </div>
+{% endif %}
+
+
+<!-- Прогресс-бар -->
+<div id="progress-container" style="display: none; margin: 20px 0;">
+    <div style="background: #f0f0f0; border-radius: 10px; overflow: hidden;">
+        <div id="progress-bar" style="background: #4CAF50; height: 20px; width: 0%; transition: width 0.3s;"></div>
+    </div>
+    <div id="progress-text" style="text-align: center; font-weight: bold;">0%</div>
+    <div id="status-text" style="text-align: center; color: #666; margin-top: 5px;">Подготовка...</div>
+</div>
+
+<!-- Новый результат -->
+<div id="result-container" style="display: none;">
+    <h3>✅ Изображение сгенерировано!</h3>
+    <img id="result-image" style="max-width: 512px;">
+</div>
+
+<form method="post">
+    {% csrf_token %}
+
+    <label>Модель:</label><br>
+    <select name="model">
+        {% for key, model in models.items %}
+            <option value="{{ key }}">{{ model.name }}</option>
+        {% endfor %}
+    </select><br><br>
+
+    <label>Качество:</label><br>
+    <select name="quality">
+        {% for key, quality in quality_presets.items %}
+            <option value="{{ key }}">{{ quality.name }} ({{ quality.width }}x{{ quality.height }})</option>
+        {% endfor %}
+    </select><br><br>
+
+    <label>Негативные промпты:</label><br>
+    <select name="negative">
+        {% for key, negative in negative_prompts.items %}
+            <option value="{{ key }}">{{ negative.name }}</option>
+        {% endfor %}
+    </select><br><br>
+
+    <textarea name="prompt" placeholder="Введите промпт на русском..." rows="4" cols="50"></textarea><br><br>
+
+    <button type="submit">Сгенерировать изображение</button>
+</form>
+
+<script>
+    let isGenerating = false;
+    let progressInterval;
+
+    function getCSRFToken() {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        return csrfToken ? csrfToken.value : '';
+    }
+
+    function startGeneration() {
+        const form = document.querySelector('form');
+        const formData = new FormData(form);
+
+        // БЛОКИРУЕМ НАВИГАЦИЮ
+        isGenerating = true;
+        const navLinks = document.querySelectorAll('.navbar a');
+        navLinks.forEach(link => {
+            if (!link.classList.contains('active')) {
+                link.style.opacity = '0.5';
+                link.style.pointerEvents = 'none';
+                link.title = 'Дождитесь завершения генерации';
+            }
+        });
+
+        const quality = formData.get('quality');
+
+        // Настройки для каждого качества
+        const qualitySettings = {
+            'fast': {time: 15000, steps: 20, timePerStep: 750},
+            'medium': {time: 35000, steps: 30, timePerStep: 1167},
+            'high': {time: 60000, steps: 40, timePerStep: 1500}
+        };
+
+        const settings = qualitySettings[quality] || qualitySettings.medium;
+
+        console.log('Начало генерации, шаги:', settings.steps, 'время:', settings.time);
+
+        // Показываем прогресс-бар
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const statusText = document.getElementById('status-text');
+
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = '0%';
+        statusText.textContent = 'Подготовка...';
+
+        document.getElementById('result-container').style.display = 'none';
+
+        // Умная анимация прогресса
+        let animatedProgress = 0;
+        let startTime = Date.now();
+        let generationStartTime = null;
+        let currentStep = 0;
+
+        function updateProgressAnimation() {
+            const elapsed = Date.now() - startTime;
+
+            // Первые 25% медленно (загрузка модели) - 5 секунд
+            if (elapsed < 5000) {
+                animatedProgress = Math.min(25, (elapsed / 5000) * 25);
+                statusText.textContent = '🔄 Загрузка модели...';
+            }
+            // Генерация
+            else {
+                if (!generationStartTime) {
+                    generationStartTime = Date.now();
+                }
+
+                const generationElapsed = Date.now() - generationStartTime;
+
+                if (quality === 'high') {
+                    const expectedTotalTime = 55000;
+                    const timeProgress = Math.min(70, (generationElapsed / expectedTotalTime) * 70);
+                    const maxStepProgress = currentStep * 1.75;
+                    animatedProgress = 25 + Math.min(timeProgress, maxStepProgress);
+
+                    const simulatedStep = Math.min(settings.steps, Math.floor(generationElapsed / 1400));
+                    if (simulatedStep > currentStep) {
+                        currentStep = simulatedStep;
+                    }
+
+                    statusText.textContent = `🎨 Генерация... (шаг ${currentStep}/${settings.steps})`;
+                } else {
+                    const generationTime = settings.time - 5000;
+                    const generationProgress = Math.min(70, (generationElapsed / generationTime) * 70);
+                    animatedProgress = 25 + generationProgress;
+
+                    const simulatedStep = Math.min(settings.steps, Math.floor((generationProgress / 70) * settings.steps));
+                    statusText.textContent = `🎨 Генерация... (шаг ${simulatedStep}/${settings.steps})`;
+                }
+            }
+
+            // ФИКС: Не даем превысить 95% до получения ответа
+            animatedProgress = Math.min(95, animatedProgress);
+
+            progressBar.style.width = animatedProgress + '%';
+            progressText.textContent = Math.round(animatedProgress) + '%';
+        }
+
+        // Запускаем анимацию прогресса
+        progressInterval = setInterval(updateProgressAnimation, 200);
+
+        // Отправляем запрос генерации - ИСПРАВЛЕННЫЙ URL
+        fetch('/generate-ajax/', {  // Убедитесь что этот URL есть в urls.py
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                prompt: formData.get('prompt'),
+                model: formData.get('model'),
+                quality: quality,
+                negative: formData.get('negative')
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Останавливаем анимацию
+                clearInterval(progressInterval);
+
+                // РАЗБЛОКИРУЕМ НАВИГАЦИЮ
+                isGenerating = false;
+                navLinks.forEach(link => {
+                    link.style.opacity = '1';
+                    link.style.pointerEvents = 'auto';
+                    link.title = '';
+                });
+
+                // Устанавливаем 100% и финальный статус
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+                statusText.textContent = '✅ Генерация завершена';
+
+                // Показываем результат
+                if (data.success) {
+                    document.getElementById('result-image').src = data.image_url;
+                    document.getElementById('result-container').style.display = 'block';
+                } else {
+                    statusText.textContent = '❌ Ошибка генерации';
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                clearInterval(progressInterval);
+                statusText.textContent = '❌ Ошибка соединения';
+
+                // РАЗБЛОКИРУЕМ НАВИГАЦИЮ ПРИ ОШИБКЕ
+                isGenerating = false;
+                navLinks.forEach(link => {
+                    link.style.opacity = '1';
+                    link.style.pointerEvents = 'auto';
+                    link.title = '';
+                });
+
+                alert('Ошибка: ' + error.message);
+            });
+    }
+
+    // Блокируем переход по ссылке галереи
+    document.addEventListener('DOMContentLoaded', function () {
+        const galleryLink = document.querySelector('a[href*="gallery"]');
+        if (galleryLink) {
+            galleryLink.addEventListener('click', function (e) {
+                if (isGenerating) {
+                    e.preventDefault();
+                    alert('⏳ Пожалуйста, дождитесь завершения генерации перед переходом в галерею');
+                    return false;
+                }
+            });
+        }
+
+        // Также блокируем закрытие страницы во время генерации
+        window.addEventListener('beforeunload', function (e) {
+            if (isGenerating) {
+                e.preventDefault();
+                e.returnValue = 'Идет генерация изображения. Вы уверены, что хотите покинуть страницу?';
+                return e.returnValue;
+            }
+        });
+
+        // Обработчик формы
+        document.querySelector('form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            startGeneration();
+        });
+    });
+</script>
+</body>
+</html>
