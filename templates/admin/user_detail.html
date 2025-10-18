@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Профиль {{ target_user.username }}</title>
+</head>
+<body>
+<h1>Профиль пользователя: {{ target_user.username }}</h1>
+
+<div>
+    <img src="{% if target_user.avatar %}{{ target_user.avatar.url }}{% else %}/static/default_avatar.png{% endif %}"
+         width="100" alt="Аватар">
+    <p>Email: {{ target_user.email|default:"Не указан" }}</p>
+    <p>Зарегистрирован: {{ target_user.date_joined|date:"d.m.Y H:i" }}</p>
+</div>
+
+<h2>История промптов ({{ user_prompts|length }})</h2>
+{% for prompt in user_prompts %}
+    <div style="border: 1px solid #ccc; padding: 10px; margin: 5px;">
+        <p><strong>{{ prompt.prompt_text }}</strong></p>
+        <small>Модель: {{ prompt.model_used }} | Использован: {{ prompt.use_count }} раз</small>
+    </div>
+{% endfor %}
+
+<h2>Галерея ({{ user_images|length }} изображений)</h2>
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+    {% for image in user_images %}
+        <div>
+            <img src="{{ image.url }}" style="width: 100%; height: auto;">
+            <small>{{ image.date }}</small>
+        </div>
+    {% endfor %}
+</div>
+
+<a href="{% url 'user_list' %}">← Назад к списку</a>
+</body>
+</html>

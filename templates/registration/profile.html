@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль - AI Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .profile-theme {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .profile-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .avatar-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .avatar-preview:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .avatar-placeholder {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            font-weight: bold;
+            border: 4px solid #667eea;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0;
+        }
+
+        .stats-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .image-thumbnail {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .image-thumbnail:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-profile {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-profile .nav-link {
+            border-radius: 12px;
+            margin: 0 6px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #4a5568;
+            padding: 12px 24px;
+        }
+
+        .nav-profile .nav-link.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-profile .nav-link:hover:not(.active) {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .nav-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            position: relative;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .user-avatar-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #667eea;
+        }
+
+        .user-avatar-placeholder-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            border: 2px solid #667eea;
+        }
+
+        .user-dropdown-toggle {
+            background: transparent;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 8px 16px;
+            color: #4a5568;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-dropdown-toggle:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .dropdown-menu {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            min-width: 250px;
+        }
+
+        .dropdown-item {
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dropdown-item:hover {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .form-control, .form-select {
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .prompt-card {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-card:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body class="profile-theme">
+<div class="container py-4">
+    <!-- Навигация -->
+    <nav class="nav-profile">
+        <div class="nav-center">
+            <!-- Центрированные ссылки -->
+            <div class="nav nav-pills">
+                <a class="nav-link" href="/">
+                    <i class="bi bi-palette me-2"></i>Генератор
+                </a>
+                <a class="nav-link" href="/gallery/">
+                    <i class="bi bi-images me-2"></i>Галерея
+                </a>
+                <a class="nav-link text-dark" href="/archive/">
+                    <i class="bi bi-archive me-2"></i>Архив
+                </a>
+                <a class="nav-link" href="/history/">
+                    <i class="bi bi-clock-history me-2"></i>История
+                </a>
+                {% if user.is_staff %}
+                    <a class="nav-link" href="{% url 'user_list' %}">
+                        <i class="bi bi-people me-2"></i>Админка
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Блок пользователя справа -->
+            <div class="user-dropdown">
+                <div class="dropdown">
+                    <button class="btn user-dropdown-toggle dropdown-toggle" type="button" id="userDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        {% if user.avatar %}
+                            <img src="{{ user.avatar.url }}" class="user-avatar-small" alt="Аватар">
+                        {% else %}
+                            <div class="user-avatar-placeholder-small">
+                                {{ user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        <span>{{ user.username }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li>
+                            <div class="user-info">
+                                <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                                <div class="user-email">{{ user.email|default:"Email не указан" }}</div>
+                            </div>
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'profile' %}">
+                            <i class="bi bi-person-circle"></i>Мой профиль
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'profile' %}">
+                            <i class="bi bi-gear"></i>Настройки аккаунта
+                        </a></li>
+                        {% if user.is_staff %}
+                            <li><a class="dropdown-item" href="{% url 'user_list' %}">
+                                <i class="bi bi-people"></i>Управление пользователями
+                            </a></li>
+                        {% endif %}
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'logout' %}">
+                            <i class="bi bi-box-arrow-right"></i>Выйти
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="row">
+        <!-- Левая колонка - Профиль -->
+        <div class="col-lg-4 mb-4">
+            <!-- Карточка профиля -->
+            <div class="card profile-card mb-4">
+                <div class="card-header text-center py-4"
+                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h4><i class="bi bi-person-circle me-2"></i>Мой профиль</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        {% if user.avatar %}
+                            <img src="{{ user.avatar.url }}" class="avatar-preview mb-3" alt="Аватар">
+                        {% else %}
+                            <div class="avatar-placeholder mx-auto mb-3">
+                                {{ user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        <h4 class="mb-1">{{ user.username }}</h4>
+                        <p class="text-muted mb-2">{{ user.email|default:"Email не указан" }}</p>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar me-1"></i>
+                            Участник с {{ user.date_joined|date:"d.m.Y" }}
+                        </small>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-success alert-dismissible fade show">
+                                    <i class="bi bi-check-circle me-2"></i>{{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Аватар</label>
+                            {{ form.avatar }}
+                            {% if form.avatar.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.avatar.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Имя пользователя</label>
+                            <input type="text" class="form-control" value="{{ user.username }}" disabled>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.email.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">О себе</label>
+                            {{ form.bio }}
+                            {% if form.bio.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.bio.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-check-circle me-2"></i>Сохранить изменения
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="card profile-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="bi bi-graph-up me-2"></i>Моя статистика
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="stats-card">
+                                <div class="stats-number">{{ user_images|length }}</div>
+                                <div class="stats-label">Изображений</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stats-card">
+                                <div class="stats-number">{{ user_prompts|length }}</div>
+                                <div class="stats-label">Промптов</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stats-card">
+                                <div class="stats-number">{{ user.date_joined|timesince }}</div>
+                                <div class="stats-label">В системе</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stats-card">
+                                <div class="stats-number">
+                                    {% if user.last_login %}
+                                        {{ user.last_login|date:"d.m.Y" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                                <div class="stats-label">Последний вход</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Правая колонка - Контент -->
+        <div class="col-lg-8">
+            <!-- Последние изображения -->
+            <div class="card profile-card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-images me-2"></i>Мои изображения
+                        </h5>
+                        <a href="/gallery/" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-arrow-right me-1"></i>Все изображения
+                        </a>
+                    </div>
+
+                    {% if user_images %}
+                        <div class="row g-3">
+                            {% for image in user_images %}
+                                <div class="col-6 col-md-4 col-lg-3">
+                                    <img src="{{ image.url }}" class="image-thumbnail"
+                                         alt="Изображение {{ forloop.counter }}"
+                                         data-bs-toggle="modal"
+                                         data-bs-target="#imageModal"
+                                         data-image-url="{{ image.url }}">
+                                    <small class="text-muted d-block mt-1">{{ image.date }}</small>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-images"></i>
+                            <h5>Нет изображений</h5>
+                            <p>Сгенерируйте своё первое изображение!</p>
+                            <a href="/" class="btn btn-primary">
+                                <i class="bi bi-magic me-2"></i>Создать изображение
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- История промптов -->
+            <div class="card profile-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-clock-history me-2"></i>История промптов
+                        </h5>
+                        <a href="/history/" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-arrow-right me-1"></i>Вся история
+                        </a>
+                    </div>
+
+                    {% if user_prompts %}
+                        <div class="prompts-list">
+                            {% for prompt in user_prompts %}
+                                <div class="prompt-card">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <p class="mb-1 fw-bold">{{ prompt.prompt_text }}</p>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <small class="badge bg-primary">Модель: {{ prompt.model_used }}</small>
+                                                <small class="badge bg-success">Качество: {{ prompt.quality_used }}</small>
+                                                <small class="badge bg-secondary">Использован: {{ prompt.use_count }}
+                                                    раз</small>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary ms-2"
+                                                onclick="usePrompt('{{ prompt.prompt_text }}', '{{ prompt.model_used }}', '{{ prompt.quality_used }}')">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-chat-left-text"></i>
+                            <h5>Нет истории промптов</h5>
+                            <p>Ваши промпты появятся здесь после генерации изображений</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для предпросмотра изображения -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Просмотр изображения</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid rounded" alt="Изображение">
+            </div>
+            <div class="modal-footer">
+                <a id="downloadLink" href="#" class="btn btn-primary" download>
+                    <i class="bi bi-download me-2"></i>Скачать
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Функция для использования промпта снова
+    function usePrompt(promptText, modelName, quality) {
+        // Сохраняем данные для главной страницы
+        localStorage.setItem('autoGenerate', JSON.stringify({
+            prompt: promptText,
+            model: modelName,
+            quality: quality,
+            negative: 'none',
+            timestamp: Date.now()
+        }));
+
+        // Показываем уведомление
+        showNotification('Промпт загружен! Переход на главную страницу...', 'success');
+
+        // Переходим на главную с небольшой задержкой
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 1000);
+    }
+
+    // Функция для показа уведомлений
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        background: ${type === 'success' ? '#48bb78' : type === 'error' ? '#e53e3e' : '#667eea'};
+        color: white;
+        border-radius: 12px;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        border: none;
+    `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // Добавьте стили для анимации уведомления
+    const notificationStyle = document.createElement('style');
+    notificationStyle.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+    document.head.appendChild(notificationStyle);
+
+    // Предпросмотр аватарки перед загрузкой
+    document.addEventListener('DOMContentLoaded', function () {
+        const avatarInput = document.querySelector('input[type="file"]');
+        if (avatarInput) {
+            avatarInput.addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const avatarPreview = document.querySelector('.avatar-preview') ||
+                            document.querySelector('.avatar-placeholder');
+                        if (avatarPreview) {
+                            if (avatarPreview.classList.contains('avatar-placeholder')) {
+                                // Заменяем placeholder на img
+                                const newAvatar = document.createElement('img');
+                                newAvatar.src = e.target.result;
+                                newAvatar.className = 'avatar-preview mb-3';
+                                newAvatar.alt = 'Аватар';
+                                avatarPreview.parentNode.replaceChild(newAvatar, avatarPreview);
+                            } else {
+                                // Обновляем существующее изображение
+                                avatarPreview.src = e.target.result;
+                            }
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Обработка клика по изображению для просмотра в модальном окне
+        const imageModal = document.getElementById('imageModal');
+        if (imageModal) {
+            imageModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const imageUrl = button.getAttribute('data-image-url');
+                const modalImage = document.getElementById('modalImage');
+                const downloadLink = document.getElementById('downloadLink');
+
+                modalImage.src = imageUrl;
+                downloadLink.href = imageUrl;
+                downloadLink.download = 'ai-generated-image.png';
+            });
+        }
+
+        // Предотвращаем открытие в новом окне при клике на миниатюру
+        document.querySelectorAll('.image-thumbnail').forEach(img => {
+            img.addEventListener('click', function (e) {
+                e.preventDefault();
+                // Bootstrap modal откроется автоматически через data-bs-toggle и data-bs-target
+            });
+        });
+    });
+
+    // Показываем уведомление при успешном сохранении
+    {% if messages %}
+        setTimeout(function () {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                setTimeout(() => bsAlert.close(), 5000);
+            });
+        }, 3000);
+    {% endif %}
+</script>
+</body>
+</html>

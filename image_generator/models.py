@@ -1,5 +1,31 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
+
+
+class CustomUser(AbstractUser):
+    """Кастомная модель пользователя"""
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    bio = models.TextField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    email = models.EmailField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+        db_table = 'auth_customuser'
+
+    def __str__(self):
+        return self.username
+
+
+class UserProfile(models.Model):
+    """Дополнительный профиль пользователя"""
+    user = models.OneToOneField('CustomUser', on_delete=models.CASCADE, related_name='profile')
+    bio = models.TextField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Профиль {self.user.username}"
 
 
 class Task(models.Model):
@@ -11,7 +37,7 @@ class Task(models.Model):
         ('failed', 'Ошибка'),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, null=True, blank=True)
     prompt = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     task_id = models.CharField(max_length=100, blank=True)
@@ -24,7 +50,7 @@ class Task(models.Model):
 
 class GeneratedImage(models.Model):
     """Сгенерированные изображения"""
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='images')
+    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='generated_images/')
     model_used = models.CharField(max_length=100)
     quality_used = models.CharField(max_length=20)
@@ -42,9 +68,10 @@ class PromptHistory(models.Model):
     model_used = models.CharField(max_length=100)
     quality_used = models.CharField(max_length=20)
     negative_prompt_used = models.CharField(max_length=100, blank=True)
-    use_count = models.IntegerField(default=1)  # Счетчик использования
+    use_count = models.IntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
-    last_used_at = models.DateTimeField(auto_now=True)  # Дата последнего использования
+    last_used_at = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
         unique_together = ['prompt_text', 'model_used', 'quality_used', 'negative_prompt_used']
@@ -82,7 +109,6 @@ class GenerationSettings(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.width}x{self.height})"
-
 
 
 class SiteStats(models.Model):
